@@ -1703,7 +1703,7 @@ package body GNATCOLL.SQL_Impl is
       if Value /= No_Time then
          declare
             Date_Str : constant String :=
-                         Image (Value - UTC_Time_Offset (Value), ISO_Date);
+              Image (Value - UTC_Time_Offset (Value), ISO_Date);
          begin
             return (if Quote then ''' & Date_Str & ''' else Date_Str);
          end;
