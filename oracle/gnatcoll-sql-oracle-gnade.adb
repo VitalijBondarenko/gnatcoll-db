@@ -18,9 +18,14 @@ package body GNATCOLL.SQL.Oracle.Gnade is
 
    Oracle_Default_Port : constant Integer := 1521;
 
-   Global_Env : OCI_Environment;
-
    Create_Mode : constant Ub4 := OCI_THREADED + OCI_OBJECT;
+
+   protected Global_Env is
+      procedure Set_Env (Value : OCI_Environment);
+      function Get_Env return OCI_Environment;
+   private
+      Env : OCI_Environment;
+   end Global_Env;
 
    function Alloc_Handle (Parent : OCIEnv; Htype : Ub4) return OCIHandle;
 
@@ -71,13 +76,40 @@ package body GNATCOLL.SQL.Oracle.Gnade is
 
    procedure Print_Error (Msg : String);
 
-   procedure Create_Env;
+   function Create_Env return OCI_Environment;
 
    function Get_Environment return OCI_Environment;
 
    function Get_Environment_Handle return OCIEnv;
 
    function Get_Error_Handle return OCIError;
+
+   ----------------
+   -- Global_Env --
+   ----------------
+
+   protected body Global_Env is
+
+      -------------
+      -- Set_Env --
+      -------------
+
+      procedure Set_Env (Value : OCI_Environment) is
+      begin
+         if Env = Null_OCI_Environment then
+            Env := Value;
+         end if;
+      end Set_Env;
+
+      -------------
+      -- Get_Env --
+      -------------
+
+      function Get_Env return OCI_Environment is
+      begin
+         return Env;
+      end Get_Env;
+   end Global_Env;
 
    ----------------------
    -- Alloc_Descriptor --
@@ -373,7 +405,7 @@ package body GNATCOLL.SQL.Oracle.Gnade is
    -- Create_Env --
    ----------------
 
-   procedure Create_Env is
+   function Create_Env return OCI_Environment is
       Env : aliased OCIEnv := Null_OCIEnv;
       Err : aliased OCIHandle := Null_OCIHandle;
       Rc  : SWord;
@@ -403,8 +435,7 @@ package body GNATCOLL.SQL.Oracle.Gnade is
          raise Error_Handle_Creation_Error;
       end if;
 
-      Global_Env.Env := Env;
-      Global_Env.Err := OCIError (Err);
+      return (Env, OCIError (Err));
    end Create_Env;
 
    ---------------------
@@ -413,11 +444,11 @@ package body GNATCOLL.SQL.Oracle.Gnade is
 
    function Get_Environment return OCI_Environment is
    begin
-      if Global_Env.Env = Null_OCIEnv then
-         Create_Env;
+      if Global_Env.Get_Env = Null_OCI_Environment then
+         Global_Env.Set_Env (Create_Env);
       end if;
 
-      return Global_Env;
+      return Global_Env.Get_Env;
    end Get_Environment;
 
    ----------------------------
@@ -426,11 +457,7 @@ package body GNATCOLL.SQL.Oracle.Gnade is
 
    function Get_Environment_Handle return OCIEnv is
    begin
-      if Global_Env.Env = Null_OCIEnv then
-         Create_Env;
-      end if;
-
-      return Global_Env.Env;
+      return Get_Environment.Env;
    end Get_Environment_Handle;
 
    ----------------------
@@ -438,23 +465,8 @@ package body GNATCOLL.SQL.Oracle.Gnade is
    ----------------------
 
    function Get_Error_Handle return OCIError is
-      Err : aliased OCIHandle := Null_OCIHandle;
    begin
-      if Global_Env.Env = Null_OCIEnv then
-         Create_Env;
-      elsif Global_Env.Err = Null_OCIError then
-         if OCIHandleAlloc
-           (Parenth => OCIHandle (Global_Env.Env),
-            Hndlpp  => Err'Access,
-            Htype   => OCI_HTYPE_ERROR) /= OCI_SUCCESS
-         then
-            raise Error_Handle_Creation_Error;
-         else
-            Global_Env.Err := OCIError (Err);
-         end if;
-      end if;
-
-      return Global_Env.Err;
+      return Get_Environment.Err;
    end Get_Error_Handle;
 
    ----------------------------------------------------------------------------
