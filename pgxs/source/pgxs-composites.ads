@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --               PostgreSQL server extension modules binding                --
 --                                                                          --
---                       Copyright (C) 2020, AdaCore                        --
+--                    Copyright (C) 2020-2021, AdaCore                      --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -22,7 +22,7 @@
 ------------------------------------------------------------------------------
 --  Subprograms to obtain and to construct values of composite types.
 
-with Interfaces.C.Extensions;
+with Interfaces.C;
 
 private with PGXS.Pools.Defaults;
 with PGXS.Types;
@@ -77,6 +77,12 @@ package PGXS.Composites is
    --  Complete tuple descriptor by initially missing information to return
    --  values from the user defined extension function.
 
+   function Relation_Name_Get_Tuple_Desc
+     (Relname : Interfaces.C.char_array) return PGXS.Tuple_Desc
+     with Import, Convention => C, Link_Name => "RelationNameGetTupleDesc";
+   --  Given a (possibly qualified) relation name, build a TupleDesc.
+   --  Note, C-style nul terminated string should be used as Relname.
+
 private
 
    type Datum_Array is array (Attribute_Number range <>) of aliased PGXS.Datum;
@@ -87,8 +93,7 @@ private
    type Attributes_Arrays (Size : Attribute_Count) is record
       Descriptor : PGXS.Tuple_Desc;
       Datums     : Datum_Array (1 .. Size);
-      Nulls      : Bool_Array (1 .. Size) :=
-        (others => Interfaces.C.Extensions.True);
+      Nulls      : Bool_Array (1 .. Size) := (others => Interfaces.C.True);
    end record;
 
    type Attributes is access all Attributes_Arrays
